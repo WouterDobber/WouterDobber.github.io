@@ -1,7 +1,9 @@
 import speech_recognition as sr
 import os
+import wave
 from flask import Flask, request, render_template, jsonify
 from flask_cors import CORS
+from pydub import AudioSegment
 
 app = Flask(__name__)
 CORS(app)
@@ -21,27 +23,39 @@ def upload():
         return "No audio file uploaded!", 400
     
     audio = request.files['audio']
-    audio_path = os.path.join(UPLOAD_FOLDER, "recording.wav")
-    audio.save(audio_path)
+    original_audio_path = os.path.join(UPLOAD_FOLDER, "recording_original")
+    audio.save(original_audio_path)
+
+    # Convert the uploaded audio file to WAV format
+    try:
+        audio_segment = AudioSegment.from_file(original_audio_path)
+        audio_path = os.path.join(UPLOAD_FOLDER, "recording.wav")
+        audio_segment.export(audio_path, format="wav")
+    except Exception as e:
+        print(f"Error converting audio file: {e}")
+        return jsonify({"message": "Error converting audio file."}), 400
 
     # Initialize the recognizer
     recognizer = sr.Recognizer()
     
     # Load the audio file
-    with sr.AudioFile(audio_path) as source:
-        audio_data = recognizer.record(source)
-        
-        try:
+    try:
+        with sr.AudioFile(audio_path) as source:
+            audio_data = recognizer.record(source)
+            
             # Transcribe the audio to text
             text = recognizer.recognize_google(audio_data)
             print(f"Transcription: {text}")
             return jsonify({"message": "File saved and transcribed.", "transcription": text})
-        except sr.UnknownValueError:
-            print("Could not understand the audio.")
-            return jsonify({"message": "Could not understand the audio."}), 400
-        except sr.RequestError:
-            print("Could not request results from the recognition service.")
-            return jsonify({"message": "Recognition service error."}), 500
+    except sr.UnknownValueError:
+        print("Could not understand the audio.")
+        return jsonify({"message": "Could not understand the audio."}), 400
+    except sr.RequestError:
+        print("Could not request results from the recognition service.")
+        return jsonify({"message": "Recognition service error."}), 500
+    except Exception as e:
+        print(f"Error processing audio file: {e}")
+        return jsonify({"message": "Error processing audio file."}), 500
 
 
 if __name__ == '__main__':
