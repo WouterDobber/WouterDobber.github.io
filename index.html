@@ -4,9 +4,18 @@
     <button id="recordButton">Record</button>
 
     <script>
+        let isRecording = false;
+
         document.getElementById('recordButton').addEventListener('click', () => {
-            fetch('/record', { method: 'POST' })
-                .then(response => console.log('Sent!'));
+            isRecording = !isRecording; // Toggle recording state
+
+            const endpoint = isRecording ? '/start-record' : '/stop-record';
+            fetch(endpoint, { method: 'POST' })
+                .then(response => response.text())
+                .then(message => console.log(message))
+                .catch(error => console.error(error));
+
+            document.getElementById('recordButton').innerText = isRecording ? "Stop" : "Record";
         });
     </script>
 </body>
