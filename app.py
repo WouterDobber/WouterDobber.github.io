@@ -1,6 +1,7 @@
 import os
 from flask import Flask, request, render_template
 from flask_cors import CORS
+import speech_recognition as sr
 
 app = Flask(__name__)
 CORS(app)
@@ -18,8 +19,9 @@ def index():
 def upload():
     if 'audio' not in request.files:
         return "No audio file uploaded!", 400
-
+    
     audio = request.files['audio']
+    print(audio)
     audio_path = os.path.join(UPLOAD_FOLDER, "recording.wav")
     audio.save(audio_path)
 
