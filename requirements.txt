@@ -1,4 +1,4 @@
 flask
 flask_cors
 gunicorn
-speech_recognition
+speechrecognition
