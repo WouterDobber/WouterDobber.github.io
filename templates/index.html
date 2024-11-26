@@ -1,12 +1,44 @@
 <!DOCTYPE html>
 <html>
 <body>
-    <button id="recordButton">Record</button>
+    <button id="recordButton">Start Recording</button>
+    <button id="stopButton" disabled>Stop Recording</button>
 
     <script>
-        document.getElementById('recordButton').addEventListener('click', () => {
-            fetch('/record', { method: 'POST' })
-                .then(response => console.log('Sent!'));
+        let mediaRecorder;
+        let audioChunks = [];
+
+        document.getElementById("recordButton").addEventListener("click", async () => {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+
+            mediaRecorder.ondataavailable = (event) => {
+                audioChunks.push(event.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+                const blob = new Blob(audioChunks, { type: 'audio/wav' });
+                const formData = new FormData();
+                formData.append('audio', blob);
+
+                await fetch('/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                audioChunks = [];
+                alert("Audio uploaded!");
+            };
+
+            mediaRecorder.start();
+            document.getElementById("recordButton").disabled = true;
+            document.getElementById("stopButton").disabled = false;
+        });
+
+        document.getElementById("stopButton").addEventListener("click", () => {
+            mediaRecorder.stop();
+            document.getElementById("recordButton").disabled = false;
+            document.getElementById("stopButton").disabled = true;
         });
     </script>
 </body>
