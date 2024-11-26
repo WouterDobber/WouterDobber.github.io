@@ -3,6 +3,7 @@
 <body>
     <button id="recordButton">Start Recording</button>
     <button id="stopButton" disabled>Stop Recording</button>
+    <div id="transcription"></div>
 
     <script>
         let mediaRecorder;
@@ -21,13 +22,19 @@
                 const formData = new FormData();
                 formData.append('audio', blob);
 
-                await fetch('/upload', {
+                const response = await fetch('/upload', {
                     method: 'POST',
                     body: formData,
                 });
 
+                const result = await response.json();
+                if (response.ok) {
+                    document.getElementById("transcription").innerText = `Transcription: ${result.transcription}`;
+                } else {
+                    document.getElementById("transcription").innerText = `Error: ${result.message}`;
+                }
+
                 audioChunks = [];
-                alert("Audio uploaded!");
             };
 
             mediaRecorder.start();
