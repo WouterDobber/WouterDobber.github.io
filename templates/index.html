@@ -42,6 +42,27 @@
             }
         }
 
+        #waveform {
+            margin-top: 20px;
+            height: 100px;
+            width: 80%;
+            background-color: #ffffff;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .bar {
+            width: 4px;
+            background-color: #001f3f;
+            margin: 1px;
+            display: inline-block;
+            height: 10%;
+        }
+
         #stopButton {
             display: none;
         }
@@ -54,17 +75,28 @@
 </head>
 <body>
     <button id="recordButton"></button>
+    <div id="waveform"></div>
     <div id="transcription"></div>
 
     <script>
         let mediaRecorder;
         let audioChunks = [];
         let recording = false;
+        let audioContext, analyser, dataArray;
 
         document.getElementById("recordButton").addEventListener("click", async () => {
             if (!recording) {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 mediaRecorder = new MediaRecorder(stream);
+
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioContext.createMediaStreamSource(stream);
+                analyser = audioContext.createAnalyser();
+                source.connect(analyser);
+                analyser.fftSize = 256;
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+                drawWaveform();
 
                 mediaRecorder.ondataavailable = (event) => {
                     audioChunks.push(event.data);
@@ -99,6 +131,23 @@
                 document.getElementById("recordButton").classList.remove("recording");
             }
         });
+
+        function drawWaveform() {
+            if (!recording) return;
+
+            analyser.getByteFrequencyData(dataArray);
+            const waveform = document.getElementById("waveform");
+            waveform.innerHTML = '';
+
+            dataArray.forEach(value => {
+                const bar = document.createElement("div");
+                bar.classList.add("bar");
+                bar.style.height = `${value / 2}%`;
+                waveform.appendChild(bar);
+            });
+
+            requestAnimationFrame(drawWaveform);
+        }
     </script>
 </body>
 </html>
