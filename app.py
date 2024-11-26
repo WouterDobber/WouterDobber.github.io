@@ -23,7 +23,7 @@ def upload():
     audio_path = os.path.join(UPLOAD_FOLDER, "recording.wav")
     audio.save(audio_path)
 
-    print("File saved to {audio_path}")
+    print(f"File saved to {audio_path}")
 
     return f"File saved to {audio_path}"
 
