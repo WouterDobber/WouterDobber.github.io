@@ -1,6 +1,6 @@
 import speech_recognition as sr
 import os
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, jsonify
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -35,12 +35,13 @@ def upload():
             # Transcribe the audio to text
             text = recognizer.recognize_google(audio_data)
             print(f"Transcription: {text}")
+            return jsonify({"message": "File saved and transcribed.", "transcription": text})
         except sr.UnknownValueError:
             print("Could not understand the audio.")
+            return jsonify({"message": "Could not understand the audio."}), 400
         except sr.RequestError:
             print("Could not request results from the recognition service.")
-
-    return f"File saved to {audio_path} and transcribed. Check console for transcription."
+            return jsonify({"message": "Recognition service error."}), 500
 
 
 if __name__ == '__main__':
