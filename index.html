@@ -1,21 +1,44 @@
 <!DOCTYPE html>
 <html>
 <body>
-    <button id="recordButton">Record</button>
+    <button id="recordButton">Start Recording</button>
+    <button id="stopButton" disabled>Stop Recording</button>
 
     <script>
-        let isRecording = false;
+        let mediaRecorder;
+        let audioChunks = [];
 
-        document.getElementById('recordButton').addEventListener('click', () => {
-            isRecording = !isRecording; // Toggle recording state
+        document.getElementById("recordButton").addEventListener("click", async () => {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
 
-            const endpoint = isRecording ? '/start-record' : '/stop-record';
-            fetch(endpoint, { method: 'POST' })
-                .then(response => response.text())
-                .then(message => console.log(message))
-                .catch(error => console.error(error));
+            mediaRecorder.ondataavailable = (event) => {
+                audioChunks.push(event.data);
+            };
 
-            document.getElementById('recordButton').innerText = isRecording ? "Stop" : "Record";
+            mediaRecorder.onstop = async () => {
+                const blob = new Blob(audioChunks, { type: 'audio/wav' });
+                const formData = new FormData();
+                formData.append('audio', blob);
+
+                await fetch('/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                audioChunks = [];
+                alert("Audio uploaded!");
+            };
+
+            mediaRecorder.start();
+            document.getElementById("recordButton").disabled = true;
+            document.getElementById("stopButton").disabled = false;
+        });
+
+        document.getElementById("stopButton").addEventListener("click", () => {
+            mediaRecorder.stop();
+            document.getElementById("recordButton").disabled = false;
+            document.getElementById("stopButton").disabled = true;
         });
     </script>
 </body>
