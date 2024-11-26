@@ -1,13 +1,12 @@
 import os
-from flask import Flask, render_template
+from flask import Flask, request, render_template
 from flask_cors import CORS
-from audiorecorder import AudioRecorder
 
 app = Flask(__name__)
 CORS(app)
 
-recorder = None
-output_file = os.path.join(app.root_path, 'recording.wav')
+UPLOAD_FOLDER = os.path.join(app.root_path, "uploads")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
 @app.route('/')
@@ -15,28 +14,16 @@ def index():
     return render_template("index.html")
 
 
-@app.route('/start-record', methods=['POST'])
-def start_record():
-    global recorder
-    if recorder is not None and recorder.is_recording:
-        return "Already recording!"
+@app.route('/upload', methods=['POST'])
+def upload():
+    if 'audio' not in request.files:
+        return "No audio file uploaded!", 400
 
-    # Start recording
-    recorder = AudioRecorder(output_file)
-    recorder.start_recording()
-    return "Recording started"
+    audio = request.files['audio']
+    audio_path = os.path.join(UPLOAD_FOLDER, "recording.wav")
+    audio.save(audio_path)
 
-
-@app.route('/stop-record', methods=['POST'])
-def stop_record():
-    global recorder
-    if recorder is None or not recorder.is_recording:
-        return "Not recording!"
-
-    # Stop recording
-    recorder.stop_recording()
-    recorder = None
-    return f"Recording saved to {output_file}"
+    return f"File saved to {audio_path}"
 
 
 if __name__ == '__main__':
