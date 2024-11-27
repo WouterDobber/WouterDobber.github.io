@@ -44,23 +44,12 @@
 
         #waveform {
             margin-top: 20px;
-            height: 100px;
+            height: 200px;
             width: 80%;
             background-color: #ffffff;
             border-radius: 10px;
             position: relative;
             overflow: hidden;
-            display: flex;
-            align-items: center;
-        }
-
-        .bar {
-            width: 3px;
-            background-color: #001f3f;
-            margin: 1px;
-            display: inline-block;
-            height: 10%;
-            transition: height 0.05s;
         }
 
         #transcription {
@@ -74,11 +63,23 @@
     <div id="waveform"></div>
     <div id="transcription"></div>
 
+    <script src="https://cdn.jsdelivr.net/npm/wavesurfer.js"></script>
     <script>
         let mediaRecorder;
         let audioChunks = [];
         let recording = false;
-        let audioContext, analyser, dataArray;
+        let audioContext;
+        let waveSurfer;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            waveSurfer = WaveSurfer.create({
+                container: '#waveform',
+                waveColor: '#001f3f',
+                progressColor: '#ff0000',
+                height: 200,
+                responsive: true
+            });
+        });
 
         document.getElementById("recordButton").addEventListener("click", async () => {
             if (!recording) {
@@ -87,12 +88,11 @@
 
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 const source = audioContext.createMediaStreamSource(stream);
-                analyser = audioContext.createAnalyser();
-                analyser.fftSize = 256;
-                source.connect(analyser);
-                dataArray = new Uint8Array(analyser.frequencyBinCount);
+                const mediaStreamDestination = audioContext.createMediaStreamDestination();
+                source.connect(mediaStreamDestination);
 
-                drawWaveform();
+                const audioUrl = URL.createObjectURL(stream);
+                waveSurfer.load(audioUrl);
 
                 mediaRecorder.ondataavailable = (event) => {
                     audioChunks.push(event.data);
@@ -127,25 +127,6 @@
                 document.getElementById("recordButton").classList.remove("recording");
             }
         });
-
-        function drawWaveform() {
-            if (!recording) return;
-
-            analyser.getByteTimeDomainData(dataArray);
-            const waveform = document.getElementById("waveform");
-            waveform.innerHTML = '';
-
-            for (let i = 0; i < dataArray.length; i += 2) {
-                const value = dataArray[i];
-                const barHeight = (value / 128.0) * 50; // Normalize the height
-                const bar = document.createElement("div");
-                bar.classList.add("bar");
-                bar.style.height = `${barHeight}%`;
-                waveform.appendChild(bar);
-            }
-
-            requestAnimationFrame(drawWaveform);
-        }
     </script>
 </body>
 </html>
