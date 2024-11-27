@@ -4,10 +4,10 @@ import wave
 from flask import Flask, request, render_template, jsonify
 from flask_cors import CORS
 from pydub import AudioSegment
-from deepmultilingualpunctuation import PunctuationModel
+#from deepmultilingualpunctuation import PunctuationModel
 
 
-punctuation_model = PunctuationModel(model="kredor/punctuation-en")
+#punctuation_model = PunctuationModel(model="kredor/punctuation-en")
 app = Flask(__name__)
 CORS(app)
 
@@ -50,11 +50,11 @@ def upload():
             text = recognizer.recognize_google(audio_data, language="en-US", show_all=False)
             print(f"Transcription: {text}")
 
-            punctuated_text = punctuation_model.restore_punctuation(text)
+ #           punctuated_text = punctuation_model.restore_punctuation(text)
             
-            print(f"Punctuated Transcription: {punctuated_text}")
+ #           print(f"Punctuated Transcription: {punctuated_text}")
             
-            return jsonify({"message": "File saved and transcribed.", "transcription": punctuated_text})    
+            return jsonify({"message": "File saved and transcribed.", "transcription": text})    
     
     except sr.UnknownValueError:
         print("Could not understand the audio.")
