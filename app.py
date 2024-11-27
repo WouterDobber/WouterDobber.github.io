@@ -1,15 +1,21 @@
 import speech_recognition as sr
 import os
-import wave
 from flask import Flask, request, render_template, jsonify
 from flask_cors import CORS
 from pydub import AudioSegment
+from deeppunctuation import DeepPunctuation
+from transformers import AutoTokenizer
 
 app = Flask(__name__)
 CORS(app)
 
 UPLOAD_FOLDER = os.path.join(app.root_path, "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# Load DeepPunct model and tokenizer
+model_name = "biluohc/deeppunctuation"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = DeepPunctuation(model_name)
 
 
 @app.route('/')
@@ -43,10 +49,19 @@ def upload():
         with sr.AudioFile(audio_path) as source:
             audio_data = recognizer.record(source)
             
-            # Transcribe the audio to text with punctuation enabled
+            # Transcribe the audio to text
             text = recognizer.recognize_google(audio_data, language="en-US", show_all=False)
             print(f"Transcription: {text}")
-            return jsonify({"message": "File saved and transcribed.", "transcription": text})
+            
+            # Add punctuation to the transcription
+            def add_punctuation(transcription):
+                inputs = tokenizer(transcription, return_tensors="pt", padding=True)
+                outputs = model(inputs.input_ids)
+                punctuated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+                return punctuated_text.strip()
+
+            punctuated_text = add_punctuation(text)
+            return jsonify({"message": "File saved and transcribed.", "transcription": punctuated_text})
     except sr.UnknownValueError:
         print("Could not understand the audio.")
         return jsonify({"message": "Could not understand the audio."}), 400
