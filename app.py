@@ -4,10 +4,11 @@ import wave
 from flask import Flask, request, render_template, jsonify
 from flask_cors import CORS
 from pydub import AudioSegment
-#from deepmultilingualpunctuation import PunctuationModel
+import requests
 
 
-#punctuation_model = PunctuationModel(model="kredor/punctuation-en")
+HF_API_URL = "https://api-inference.huggingface.co/models/oliverguhr/fullstop-punctuation-multilang-large"
+HF_HEADERS = {"Authorization": "Bearer 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"}
 app = Flask(__name__)
 CORS(app)
 
@@ -50,11 +51,25 @@ def upload():
             text = recognizer.recognize_google(audio_data, language="en-US", show_all=False)
             print(f"Transcription: {text}")
 
- #           punctuated_text = punctuation_model.restore_punctuation(text)
+            try:
+                response = requests.post(
+                    HF_API_URL,
+                    headers=HF_HEADERS,
+                    json={"inputs": text}
+                )
+                if response.status_code == 200:
+                    punctuated_text = response.json().get("generated_text", text)
+                    print(f"Punctuated Transcription: {punctuated_text}")
+                else:
+                    print(f"Error from Hugging Face API: {response.status_code}, {response.text}")
+                    punctuated_text = text  # Fallback to unpunctuated text
+
+            except Exception as api_error:
+                print(f"Error calling Hugging Face API: {api_error}")
+                punctuated_text = text  # Fallback to unpunctuated text
+
             
- #           print(f"Punctuated Transcription: {punctuated_text}")
-            
-            return jsonify({"message": "File saved and transcribed.", "transcription": text})    
+            return jsonify({"message": "File saved and transcribed.", "transcription": punctuated_text})    
     
     except sr.UnknownValueError:
         print("Could not understand the audio.")
