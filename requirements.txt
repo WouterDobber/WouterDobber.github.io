@@ -5,5 +5,4 @@ soundfile
 numpy
 speechrecognition
 pydub
-transformers
-torch
+google-cloud-speech
