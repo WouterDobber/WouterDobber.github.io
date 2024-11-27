@@ -1,8 +1,6 @@
-flask
-flask_cors
-gunicorn
-soundfile
-numpy
-speechrecognition
+Flask
+Flask-Cors
+SpeechRecognition
 pydub
-google-cloud-speech
+transformers
+torch
