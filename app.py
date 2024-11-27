@@ -7,7 +7,7 @@ from pydub import AudioSegment
 from deepmultilingualpunctuation import PunctuationModel
 
 
-punctuation_model = PunctuationModel()
+punctuation_model = PunctuationModel(model="kredor/punctuation-en")
 app = Flask(__name__)
 CORS(app)
 
