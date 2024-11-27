@@ -47,8 +47,8 @@ def upload():
             audio_data = recognizer.record(source)
             
             # Transcribe the audio to text
-            text = recognizer.recognize_google(audio_data, language="en-US", show_all=False)
-            print(f"Transcription: {text}")
+        text = recognizer.recognize_google(audio_data, language="en-US", show_all=False, enable_automatic_punctuation=True)
+        print(f"Transcription: {text}")
             
             # Add punctuation to the transcription
             def add_punctuation(transcription):
