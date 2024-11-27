@@ -7,12 +7,16 @@
             color: #ffffff;
             font-family: Arial, sans-serif;
             text-align: center;
-            padding-top: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
         }
 
         #recordButton {
-            width: 150px;
-            height: 150px;
+            width: 200px;
+            height: 200px;
             background-color: red;
             border-radius: 50%;
             border: none;
@@ -29,97 +33,134 @@
             transform: scale(1.1);
         }
 
-        #recordButton.recording {
-            animation: pulse 1s infinite;
-        }
-
-        @keyframes pulse {
-            0% {
-                box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7);
-            }
-            70% {
-                box-shadow: 0 0 30px 30px rgba(255, 0, 0, 0);
-            }
-            100% {
-                box-shadow: 0 0 0 0 rgba(255, 0, 0, 0);
-            }
-        }
-
-        .wave {
+        #recordButton .bars {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
             position: absolute;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 20%, transparent 70%);
-            opacity: 0;
-            animation: wave 1.2s infinite ease-in-out;
+            bottom: 10px;
+            height: 50px;
+            width: 80%;
         }
 
-        .wave:nth-child(1) {
+        #recordButton .bar {
+            width: 5px;
+            margin: 0 2px;
+            background-color: white;
+            animation: barAnimation 1s infinite;
+        }
+
+        #recordButton .bar:nth-child(1) {
             animation-delay: 0s;
         }
 
-        .wave:nth-child(2) {
+        #recordButton .bar:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        #recordButton .bar:nth-child(3) {
             animation-delay: 0.4s;
         }
 
-        .wave:nth-child(3) {
+        #recordButton .bar:nth-child(4) {
+            animation-delay: 0.6s;
+        }
+
+        #recordButton .bar:nth-child(5) {
             animation-delay: 0.8s;
         }
 
-        @keyframes wave {
-            0% {
-                transform: scale(1);
-                opacity: 1;
+        @keyframes barAnimation {
+            0%, 100% {
+                height: 10px;
             }
-            100% {
-                transform: scale(2.5);
-                opacity: 0;
+            50% {
+                height: 40px;
             }
+        }
+
+        #transcription {
+            margin-top: 20px;
+            font-size: 1.5em;
+            position: absolute;
+            top: 80%;
+            width: 100%;
+            text-align: center;
         }
     </style>
 </head>
 <body>
-    <button id="recordButton"></button>
-    <div id="transcription" style="margin-top: 20px; font-size: 1.2em;"></div>
+    <div>
+        <button id="recordButton"></button>
+        <div id="transcription">Press the button to record...</div>
+    </div>
 
     <script>
         let recording = false;
+        let mediaRecorder;
+        let audioChunks = [];
         const recordButton = document.getElementById("recordButton");
+        const transcriptionDiv = document.getElementById("transcription");
+
+        // Add dynamic bars for animation
+        function addBars() {
+            const barsContainer = document.createElement("div");
+            barsContainer.classList.add("bars");
+            for (let i = 0; i < 5; i++) {
+                const bar = document.createElement("div");
+                bar.classList.add("bar");
+                barsContainer.appendChild(bar);
+            }
+            recordButton.appendChild(barsContainer);
+        }
+
+        // Remove bars animation
+        function removeBars() {
+            const barsContainer = recordButton.querySelector(".bars");
+            if (barsContainer) {
+                barsContainer.remove();
+            }
+        }
 
         recordButton.addEventListener("click", async () => {
             if (!recording) {
-                startRecording();
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = async () => {
+                    const blob = new Blob(audioChunks, { type: 'audio/wav' });
+                    const formData = new FormData();
+                    formData.append('audio', blob);
+
+                    // Example transcription logic: Replace with your server logic
+                    const response = await fetch('/upload', {
+                        method: 'POST',
+                        body: formData,
+                    });
+
+                    const result = await response.json();
+                    if (response.ok) {
+                        transcriptionDiv.innerText = `Transcription: ${result.transcription}`;
+                    } else {
+                        transcriptionDiv.innerText = `Error: ${result.message}`;
+                    }
+
+                    audioChunks = [];
+                };
+
+                mediaRecorder.start();
+                recording = true;
+                addBars();
+                transcriptionDiv.innerText = "Recording...";
             } else {
-                stopRecording();
+                mediaRecorder.stop();
+                recording = false;
+                removeBars();
             }
         });
-
-        function startRecording() {
-            recording = true;
-            recordButton.classList.add("recording");
-
-            // Add soundwave animation
-            for (let i = 0; i < 3; i++) {
-                const wave = document.createElement("div");
-                wave.classList.add("wave");
-                recordButton.appendChild(wave);
-            }
-
-            // Simulate recording logic (e.g., fetch microphone data or send requests)
-            document.getElementById("transcription").innerText = "Recording...";
-        }
-
-        function stopRecording() {
-            recording = false;
-            recordButton.classList.remove("recording");
-
-            // Remove soundwave animation
-            const waves = recordButton.querySelectorAll(".wave");
-            waves.forEach(wave => wave.remove());
-
-            // Simulate stopping logic
-            document.getElementById("transcription").innerText = "Recording stopped.";
-        }
     </script>
 </body>
 </html>
