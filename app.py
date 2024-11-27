@@ -43,8 +43,8 @@ def upload():
         with sr.AudioFile(audio_path) as source:
             audio_data = recognizer.record(source)
             
-            # Transcribe the audio to text
-            text = recognizer.recognize_google(audio_data)
+            # Transcribe the audio to text with punctuation enabled
+            text = recognizer.recognize_google(audio_data, language="en-US", show_all=False)
             print(f"Transcription: {text}")
             return jsonify({"message": "File saved and transcribed.", "transcription": text})
     except sr.UnknownValueError:
