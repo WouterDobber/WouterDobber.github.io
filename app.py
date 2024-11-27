@@ -47,15 +47,19 @@ def upload():
         with sr.AudioFile(audio_path) as source:
             audio_data = recognizer.record(source)
             
-            # Transcribe the audio to text with punctuation enabled
+            # Transcribe the audio to text
             text = recognizer.recognize_google(audio_data, language="en-US", show_all=False)
             print(f"Transcription: {text}")
 
+            # Add wait_for_model=True in the API request
             try:
                 response = requests.post(
                     HF_API_URL,
                     headers=HF_HEADERS,
-                    json={"inputs": text}
+                    json={
+                        "inputs": text,
+                        "options": {"wait_for_model": True}  # Ensure the model loads if not already loaded
+                    }
                 )
                 if response.status_code == 200:
                     punctuated_text = response.json().get("generated_text", text)
@@ -68,7 +72,6 @@ def upload():
                 print(f"Error calling Hugging Face API: {api_error}")
                 punctuated_text = text  # Fallback to unpunctuated text
 
-            
             return jsonify({"message": "File saved and transcribed.", "transcription": punctuated_text})    
     
     except sr.UnknownValueError:
@@ -84,3 +87,4 @@ def upload():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
+
