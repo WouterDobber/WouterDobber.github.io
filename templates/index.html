@@ -52,15 +52,15 @@
             overflow: hidden;
             display: flex;
             align-items: center;
-            justify-content: center;
         }
 
         .bar {
-            width: 4px;
+            width: 3px;
             background-color: #001f3f;
             margin: 1px;
             display: inline-block;
             height: 10%;
+            transition: height 0.1s;
         }
 
         #stopButton {
@@ -92,8 +92,8 @@
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 const source = audioContext.createMediaStreamSource(stream);
                 analyser = audioContext.createAnalyser();
+                analyser.fftSize = 512;
                 source.connect(analyser);
-                analyser.fftSize = 256;
                 dataArray = new Uint8Array(analyser.frequencyBinCount);
 
                 drawWaveform();
@@ -135,16 +135,18 @@
         function drawWaveform() {
             if (!recording) return;
 
-            analyser.getByteFrequencyData(dataArray);
+            analyser.getByteTimeDomainData(dataArray);
             const waveform = document.getElementById("waveform");
             waveform.innerHTML = '';
 
-            dataArray.forEach(value => {
+            for (let i = 0; i < dataArray.length; i += 4) {
+                const value = dataArray[i];
+                const barHeight = (value / 128.0) * 50; // Normalize the height
                 const bar = document.createElement("div");
                 bar.classList.add("bar");
-                bar.style.height = `${value / 2}%`;
+                bar.style.height = `${barHeight}%`;
                 waveform.appendChild(bar);
-            });
+            }
 
             requestAnimationFrame(drawWaveform);
         }
