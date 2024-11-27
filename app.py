@@ -1,10 +1,9 @@
+import speech_recognition as sr
 import os
 import wave
 from flask import Flask, request, render_template, jsonify
 from flask_cors import CORS
 from pydub import AudioSegment
-import speech_recognition as sr
-from transformers import pipeline
 
 app = Flask(__name__)
 CORS(app)
@@ -12,8 +11,6 @@ CORS(app)
 UPLOAD_FOLDER = os.path.join(app.root_path, "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Load punctuation model
-punctuation_model = pipeline("text2text-generation", model="pszemraj/bert-base-uncased-punctuation")
 
 @app.route('/')
 def index():
@@ -46,18 +43,10 @@ def upload():
         with sr.AudioFile(audio_path) as source:
             audio_data = recognizer.record(source)
             
-            # Transcribe the audio to text
+            # Transcribe the audio to text with punctuation enabled
             text = recognizer.recognize_google(audio_data, language="en-US", show_all=False)
-            print(f"Raw Transcription: {text}")
-            
-            # Apply punctuation
-            try:
-                punctuated_text = punctuation_model(text)[0]['generated_text']
-                print(f"Punctuated Transcription: {punctuated_text}")
-                return jsonify({"message": "File saved and transcribed.", "transcription": punctuated_text})
-            except Exception as e:
-                print(f"Error punctuating transcription: {e}")
-                return jsonify({"message": "Error punctuating transcription."}), 500
+            print(f"Transcription: {text}")
+            return jsonify({"message": "File saved and transcribed.", "transcription": text})
     except sr.UnknownValueError:
         print("Could not understand the audio.")
         return jsonify({"message": "Could not understand the audio."}), 400
