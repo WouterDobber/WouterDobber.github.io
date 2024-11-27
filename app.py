@@ -1,11 +1,9 @@
 import speech_recognition as sr
 import os
-import wave
 from flask import Flask, request, render_template, jsonify
 from flask_cors import CORS
 from pydub import AudioSegment
 import requests
-
 
 app = Flask(__name__)
 CORS(app)
@@ -13,6 +11,7 @@ CORS(app)
 UPLOAD_FOLDER = os.path.join(app.root_path, "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+DEEPGRAM_API_KEY = "84fe12f84c6c00279f12bda538775e7e4900d7f8"  # Replace with your Deepgram API key
 
 @app.route('/')
 def index():
@@ -37,32 +36,33 @@ def upload():
         print(f"Error converting audio file: {e}")
         return jsonify({"message": "Error converting audio file."}), 400
 
-    # Initialize the recognizer
-    recognizer = sr.Recognizer()
-    
-    # Load the audio file
+    # Send the audio to the Deepgram API for transcription with punctuation
     try:
-        with sr.AudioFile(audio_path) as source:
-            audio_data = recognizer.record(source)
+        with open(audio_path, "rb") as audio_file:
+            headers = {
+                "Authorization": f"Token {DEEPGRAM_API_KEY}",
+                "Content-Type": "audio/wav"
+            }
+            response = requests.post(
+                "https://api.deepgram.com/v1/listen?punctuate=true",
+                headers=headers,
+                data=audio_file
+            )
             
-            # Transcribe the audio to text
-            text = recognizer.recognize_google(audio_data, language="en-US", show_all=False)
-            print(f"Transcription: {text}")
-
-
-            return jsonify({"message": "File saved and transcribed.", "transcription": text})    
+            if response.status_code != 200:
+                print(f"Error from Deepgram API: {response.status_code} {response.text}")
+                return jsonify({"message": "Error from Deepgram API."}), 500
+            
+            transcription_result = response.json()
+            transcription_text = transcription_result.get("results", {}).get("channels", [{}])[0].get("alternatives", [{}])[0].get("transcript", "")
+            
+            print(f"Transcription with punctuation: {transcription_text}")
+            return jsonify({"message": "File saved and transcribed.", "transcription": transcription_text})
     
-    except sr.UnknownValueError:
-        print("Could not understand the audio.")
-        return jsonify({"message": "Could not understand the audio."}), 400
-    except sr.RequestError:
-        print("Could not request results from the recognition service.")
-        return jsonify({"message": "Recognition service error."}), 500
     except Exception as e:
-        print(f"Error processing audio file: {e}")
+        print(f"Error processing audio file with Deepgram API: {e}")
         return jsonify({"message": "Error processing audio file."}), 500
 
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
-
