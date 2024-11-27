@@ -70,6 +70,9 @@
         let recording = false;
         let audioContext;
         let waveSurfer;
+        let analyser;
+        let dataArray;
+        let animationFrame;
 
         document.addEventListener("DOMContentLoaded", () => {
             waveSurfer = WaveSurfer.create({
@@ -77,28 +80,52 @@
                 waveColor: '#001f3f',
                 progressColor: '#ff0000',
                 height: 200,
-                responsive: true
+                responsive: true,
+                interact: false,
+                cursorWidth: 0
             });
         });
+
+        async function visualize(stream) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaStreamSource(stream);
+
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 256; // Adjust for resolution
+            const bufferLength = analyser.frequencyBinCount;
+            dataArray = new Uint8Array(bufferLength);
+
+            source.connect(analyser);
+
+            function draw() {
+                analyser.getByteFrequencyData(dataArray);
+                waveSurfer.empty();
+                for (let i = 0; i < bufferLength; i++) {
+                    const barHeight = dataArray[i];
+                    waveSurfer.drawer.drawBars(i, barHeight, waveSurfer.params.progressColor);
+                }
+                animationFrame = requestAnimationFrame(draw);
+            }
+
+            draw();
+        }
 
         document.getElementById("recordButton").addEventListener("click", async () => {
             if (!recording) {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
                 mediaRecorder = new MediaRecorder(stream);
 
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const source = audioContext.createMediaStreamSource(stream);
-                const mediaStreamDestination = audioContext.createMediaStreamDestination();
-                source.connect(mediaStreamDestination);
-
-                const audioUrl = URL.createObjectURL(stream);
-                waveSurfer.load(audioUrl);
+                visualize(stream);
 
                 mediaRecorder.ondataavailable = (event) => {
                     audioChunks.push(event.data);
                 };
 
                 mediaRecorder.onstop = async () => {
+                    cancelAnimationFrame(animationFrame);
+                    audioContext.close();
+
                     const blob = new Blob(audioChunks, { type: 'audio/wav' });
                     const formData = new FormData();
                     formData.append('audio', blob);
