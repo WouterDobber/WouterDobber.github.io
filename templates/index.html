@@ -60,11 +60,7 @@
             margin: 1px;
             display: inline-block;
             height: 10%;
-            transition: height 0.1s;
-        }
-
-        #stopButton {
-            display: none;
+            transition: height 0.05s;
         }
 
         #transcription {
@@ -92,9 +88,9 @@
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 const source = audioContext.createMediaStreamSource(stream);
                 analyser = audioContext.createAnalyser();
-                analyser.fftSize = 2048;
+                analyser.fftSize = 256;
                 source.connect(analyser);
-                dataArray = new Uint8Array(analyser.fftSize);
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
 
                 drawWaveform();
 
@@ -135,13 +131,13 @@
         function drawWaveform() {
             if (!recording) return;
 
-            analyser.getByteFrequencyData(dataArray);
+            analyser.getByteTimeDomainData(dataArray);
             const waveform = document.getElementById("waveform");
             waveform.innerHTML = '';
 
-            for (let i = 0; i < dataArray.length; i += 10) {
+            for (let i = 0; i < dataArray.length; i += 2) {
                 const value = dataArray[i];
-                const barHeight = (value / 256.0) * 100; // Normalize the height
+                const barHeight = (value / 128.0) * 50; // Normalize the height
                 const bar = document.createElement("div");
                 bar.classList.add("bar");
                 bar.style.height = `${barHeight}%`;
