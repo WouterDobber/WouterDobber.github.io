@@ -5,5 +5,5 @@ soundfile
 numpy
 speechrecognition
 pydub
-deeppunctuation
 transformers
+torch
