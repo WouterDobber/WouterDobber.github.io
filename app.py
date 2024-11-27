@@ -3,8 +3,7 @@ import os
 from flask import Flask, request, render_template, jsonify
 from flask_cors import CORS
 from pydub import AudioSegment
-from deeppunctuation import DeepPunctuation
-from transformers import AutoTokenizer
+from transformers import pipeline
 
 app = Flask(__name__)
 CORS(app)
@@ -12,10 +11,8 @@ CORS(app)
 UPLOAD_FOLDER = os.path.join(app.root_path, "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Load DeepPunct model and tokenizer
-model_name = "biluohc/deeppunctuation"
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = DeepPunctuation(model_name)
+# Load Hugging Face punctuation restoration model
+punctuation_model = pipeline("text2text-generation", model="oliverguhr/fullstop-punctuation-multilang-large")
 
 
 @app.route('/')
@@ -55,10 +52,8 @@ def upload():
             
             # Add punctuation to the transcription
             def add_punctuation(transcription):
-                inputs = tokenizer(transcription, return_tensors="pt", padding=True)
-                outputs = model(inputs.input_ids)
-                punctuated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
-                return punctuated_text.strip()
+                result = punctuation_model(transcription, max_length=512)
+                return result[0]["generated_text"]
 
             punctuated_text = add_punctuation(text)
             return jsonify({"message": "File saved and transcribed.", "transcription": punctuated_text})
